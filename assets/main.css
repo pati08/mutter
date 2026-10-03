@@ -1,0 +1,14 @@
+/* App-wide base styles. Component styling lives in Tailwind classes. */
+
+html,
+body,
+#main {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background-color: #f8fafc; /* slate-50 */
+    color: #0f172a; /* slate-900 */
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+}
