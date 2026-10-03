@@ -2,7 +2,7 @@
 //!
 //! The thread lives only in memory for the session; a reload clears it. Incoming
 //! messages are deduped by id and acknowledged in batches (a replay burst is acked
-//! together). See `PLAN.md` M3.
+//! together). See `PLAN.md` M3–M4.
 
 use std::collections::HashMap;
 
@@ -28,17 +28,26 @@ fn ChatScreen() -> Element {
     let mut selected = use_signal(|| None::<UserId>);
     let mut unread = use_signal(HashMap::<UserId, u32>::new);
     let mut draft = use_signal(String::new);
+    let mut search = use_signal(String::new);
     let mut error = use_signal(|| None::<String>);
+    let mut connected = use_signal(|| true);
+    // Bumped to restart the SSE stream after a disconnection.
+    let mut generation = use_signal(|| 0u32);
     let contact_list = use_resource(move || async move { contacts().await });
 
-    // Consume the SSE stream once, on the client only. `use_effect` does not run
-    // during SSR and, with no reactive reads, will not restart.
+    // Consume the SSE stream, on the client only. Reading `generation` subscribes
+    // the effect to it, so the Reconnect button restarts the stream.
     use_effect(move || {
+        let my_generation = generation();
+
         spawn(async move {
+            connected.set(true);
+
             let mut stream = match events().await {
                 Ok(stream) => stream,
                 Err(err) => {
                     error.set(Some(err.to_string()));
+                    connected.set(false);
                     return;
                 }
             };
@@ -56,6 +65,12 @@ fn ChatScreen() -> Element {
                 }
 
                 let _ = ack_messages(ids).await;
+            }
+
+            // The stream ended: replaced by another tab, or the network dropped.
+            // Ignore it if this task has already been superseded by a reconnect.
+            if *generation.peek() == my_generation {
+                connected.set(false);
             }
         });
     });
@@ -76,12 +91,35 @@ fn ChatScreen() -> Element {
         }
     };
 
+    let on_reconnect = move |_| {
+        *generation.write() += 1;
+    };
+
     let selected_id = *selected.peek();
     let thread_snapshot = thread();
-    let selected_user = match contact_list() {
-        Some(Ok(list)) => selected_id.and_then(|id| list.into_iter().find(|user| user.id == id)),
+    let query = search().trim().to_lowercase();
+
+    let contacts_state = contact_list();
+    let selected_user = match &contacts_state {
+        Some(Ok(list)) => {
+            selected_id.and_then(|id| list.iter().find(|user| user.id == id).cloned())
+        }
         _ => None,
     };
+    let contacts_loading = contacts_state.is_none();
+    let contacts_error = match &contacts_state {
+        Some(Err(err)) => Some(err.to_string()),
+        _ => None,
+    };
+    let visible_contacts: Vec<User> = match &contacts_state {
+        Some(Ok(list)) => list
+            .iter()
+            .filter(|user| matches_search(user, &query))
+            .cloned()
+            .collect(),
+        _ => Vec::new(),
+    };
+
     let conversation: Vec<Message> = match selected_id {
         Some(id) => thread_snapshot
             .iter()
@@ -92,25 +130,60 @@ fn ChatScreen() -> Element {
     };
     let conversation_empty = conversation.is_empty();
 
-    rsx! {
-        div { class: "flex h-dvh bg-slate-100 text-slate-900",
-            aside { class: "flex w-80 shrink-0 flex-col border-r border-slate-200 bg-white",
-                header { class: "flex items-center justify-between px-5 py-4",
-                    span { class: "text-xl font-semibold", "mutter" }
-                    SignOutButton {}
-                }
+    // On small screens show either the list or the thread, never both.
+    let list_class = if selected_id.is_some() {
+        "hidden min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white md:flex md:w-80"
+    } else {
+        "flex min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white md:w-80"
+    };
+    let thread_class = if selected_id.is_some() {
+        "flex min-h-0 flex-1 flex-col bg-slate-50"
+    } else {
+        "hidden min-h-0 flex-1 flex-col bg-slate-50 md:flex"
+    };
 
-                div { class: "px-4 pb-3",
-                    input {
-                        class: "w-full rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400",
-                        placeholder: "Search here...",
+    rsx! {
+        div { class: "flex h-dvh flex-col bg-slate-100 text-slate-900",
+            if !connected() {
+                div { class: "flex items-center justify-between gap-3 bg-amber-50 px-6 py-2 text-sm text-amber-800",
+                    span { "Disconnected — this account may be open in another tab." }
+                    button {
+                        class: "rounded border border-amber-300 px-2 py-0.5 font-medium hover:bg-amber-100",
+                        onclick: on_reconnect,
+                        "Reconnect"
                     }
                 }
+            }
 
-                nav { class: "flex-1 space-y-1 overflow-y-auto px-2 pb-3",
-                    match contact_list() {
-                        Some(Ok(list)) => rsx! {
-                            for user in list {
+            if let Some(message) = error() {
+                div { class: "bg-red-50 px-6 py-2 text-sm text-red-700", "{message}" }
+            }
+
+            div { class: "flex min-h-0 flex-1",
+                aside { class: "{list_class}",
+                    header { class: "flex items-center justify-between px-5 py-4",
+                        span { class: "text-xl font-semibold", "mutter" }
+                        SignOutButton {}
+                    }
+
+                    div { class: "px-4 pb-3",
+                        input {
+                            class: "w-full rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400",
+                            placeholder: "Search here...",
+                            value: "{search}",
+                            oninput: move |event| search.set(event.value()),
+                        }
+                    }
+
+                    nav { class: "flex-1 space-y-1 overflow-y-auto px-2 pb-3",
+                        if let Some(err) = contacts_error {
+                            p { class: "px-3 py-3 text-sm text-red-600", "{err}" }
+                        } else if contacts_loading {
+                            p { class: "px-3 py-3 text-sm text-slate-400", "Loading contacts…" }
+                        } else if visible_contacts.is_empty() {
+                            p { class: "px-3 py-3 text-sm text-slate-400", "No conversations match." }
+                        } else {
+                            for user in visible_contacts {
                                 ContactRow {
                                     key: "{user.id.0}",
                                     user: user.clone(),
@@ -123,65 +196,70 @@ fn ChatScreen() -> Element {
                                     },
                                 }
                             }
-                        },
-                        Some(Err(err)) => rsx! {
-                            p { class: "px-3 py-3 text-sm text-red-600", "{err}" }
-                        },
-                        None => rsx! {
-                            p { class: "px-3 py-3 text-sm text-slate-400", "Loading contacts…" }
-                        },
+                        }
                     }
                 }
-            }
 
-            main { class: "flex flex-1 flex-col bg-slate-50",
-                if let Some(message) = error() {
-                    div { class: "bg-red-50 px-6 py-2 text-sm text-red-700", "{message}" }
-                }
-
-                match selected_user {
-                    Some(user) => rsx! {
-                        header { class: "flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-4",
-                            div { class: "flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold text-white",
-                                "{initials(&user.name)}"
-                            }
-                            div {
-                                div { class: "font-semibold", "{user.name}" }
-                                div { class: "text-sm text-slate-500", "@{user.username}" }
-                            }
-                        }
-
-                        div { class: "flex-1 space-y-3 overflow-y-auto px-6 py-6",
-                            for message in conversation {
-                                Bubble {
-                                    key: "{message.id.0}",
-                                    mine: message.from != user.id,
-                                    contents: message.contents,
-                                    sent: message.sent.0,
+                main { class: "{thread_class}",
+                    match selected_user {
+                        Some(user) => rsx! {
+                            header { class: "flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-4 md:px-6",
+                                button {
+                                    class: "rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden",
+                                    aria_label: "Back to conversations",
+                                    onclick: move |_| selected.set(None),
+                                    svg {
+                                        class: "h-5 w-5",
+                                        view_box: "0 0 24 24",
+                                        fill: "none",
+                                        stroke: "currentColor",
+                                        stroke_width: "2",
+                                        stroke_linecap: "round",
+                                        stroke_linejoin: "round",
+                                        path { d: "M15 18l-6-6 6-6" }
+                                    }
+                                }
+                                div { class: "flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold text-white",
+                                    "{initials(&user.name)}"
+                                }
+                                div {
+                                    div { class: "font-semibold", "{user.name}" }
+                                    div { class: "text-sm text-slate-500", "@{user.username}" }
                                 }
                             }
-                            if conversation_empty {
-                                p { class: "text-center text-sm text-slate-400", "No messages yet. Say hello." }
-                            }
-                        }
 
-                        form {
-                            class: "flex items-center gap-3 border-t border-slate-200 bg-white px-6 py-4",
-                            onsubmit: on_send,
-                            input {
-                                class: "flex-1 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400",
-                                placeholder: "Type your message",
-                                value: "{draft}",
-                                oninput: move |event| draft.set(event.value()),
+                            div { class: "flex-1 space-y-3 overflow-y-auto px-6 py-6",
+                                for message in conversation {
+                                    Bubble {
+                                        key: "{message.id.0}",
+                                        mine: message.from != user.id,
+                                        contents: message.contents,
+                                        sent: message.sent.0,
+                                    }
+                                }
+                                if conversation_empty {
+                                    p { class: "text-center text-sm text-slate-400", "No messages yet. Say hello." }
+                                }
                             }
-                            button {
-                                r#type: "submit",
-                                class: "rounded-full bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700",
-                                "Send"
+
+                            form {
+                                class: "flex items-center gap-3 border-t border-slate-200 bg-white px-4 py-4 md:px-6",
+                                onsubmit: on_send,
+                                input {
+                                    class: "flex-1 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400",
+                                    placeholder: "Type your message",
+                                    value: "{draft}",
+                                    oninput: move |event| draft.set(event.value()),
+                                }
+                                button {
+                                    r#type: "submit",
+                                    class: "rounded-full bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700",
+                                    "Send"
+                                }
                             }
-                        }
-                    },
-                    None => rsx! { EmptyState {} },
+                        },
+                        None => rsx! { EmptyState {} },
+                    }
                 }
             }
         }
@@ -240,7 +318,7 @@ fn Bubble(mine: bool, contents: String, sent: u64) -> Element {
                     } else {
                         "mt-1 text-right text-[11px] text-slate-400"
                     },
-                    "{relative_time(sent)}"
+                    "{format_time(sent)}"
                 }
             }
         }
@@ -301,6 +379,12 @@ fn absorb(
     }
 }
 
+fn matches_search(user: &User, query: &str) -> bool {
+    query.is_empty()
+        || user.name.to_lowercase().contains(query)
+        || user.username.to_lowercase().contains(query)
+}
+
 fn last_message(thread: &[Message], user: UserId) -> Option<String> {
     thread
         .iter()
@@ -317,26 +401,17 @@ fn initials(name: &str) -> String {
         .to_uppercase()
 }
 
-fn relative_time(sent: u64) -> String {
-    let diff = now_secs().saturating_sub(sent);
-    match diff {
-        0..=59 => "now".to_string(),
-        60..=3599 => format!("{}m", diff / 60),
-        3600..=86_399 => format!("{}h", diff / 3600),
-        _ => format!("{}d", diff / 86_400),
-    }
-}
-
-fn now_secs() -> u64 {
+/// Local wall-clock time as `HH:MM`.
+fn format_time(sent: u64) -> String {
     #[cfg(target_arch = "wasm32")]
     {
-        (js_sys::Date::now() / 1000.0) as u64
+        let date = js_sys::Date::new_0();
+        date.set_time((sent as f64) * 1000.0);
+        format!("{:02}:{:02}", date.get_hours(), date.get_minutes())
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_secs())
-            .unwrap_or_default()
+        let secs = sent % 86_400;
+        format!("{:02}:{:02}", secs / 3600, (secs % 3600) / 60)
     }
 }

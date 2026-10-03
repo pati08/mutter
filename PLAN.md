@@ -222,10 +222,13 @@ Recorded here so they are not lost:
   and relative timestamps, composer, live SSE consumption with dedupe by `MessageId`,
   and batched acks (a replay burst is acked together). `dx build --platform web`
   succeeds; native, server, and wasm builds clean; SSR renders `/login` and `/`.
-  Browser interaction itself was not automated. The search box is inert and
-  timestamps are relative — both are M4 polish.
-- **M4 — Polish.** Disconnection handling ("connected elsewhere"), empty/loading
-  states, basic responsive layout.
+  Browser interaction itself was not automated.
+- **M4 — Polish. ✅ Done.** Contact **search** filters by name/username;
+  **disconnection handling** shows a banner with a Reconnect button when the SSE
+  stream ends (e.g. replaced by another tab); **responsive layout** shows the list or
+  the thread on small screens (with a back button) and both on `md+`; timestamps are
+  now local `HH:MM`. Native, server, wasm, and clippy all clean; `dx build` emits the
+  responsive utilities. Browser interaction is still not automated.
 
 ## 10. Assumptions to confirm
 
