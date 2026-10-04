@@ -14,3 +14,4 @@
 # pi tooling state
 .pi/
 .pi-glla/
+assets/tailwind.css
