@@ -31,9 +31,9 @@ pub fn ChangePassword() -> Element {
     };
 
     rsx! {
-        div { class: "flex min-h-dvh items-center justify-center bg-slate-100 p-4",
+        div { class: "flex min-h-dvh items-center justify-center accent-softer p-4",
             form {
-                class: "w-full max-w-sm space-y-4 rounded-2xl bg-white p-8 shadow-lg",
+                class: "accent-card w-full max-w-sm space-y-4 rounded-md p-8",
                 onsubmit: on_submit,
 
                 h1 { class: "text-2xl font-semibold text-slate-900", "Choose a new password" }
@@ -48,7 +48,7 @@ pub fn ChangePassword() -> Element {
                         r#type: "password",
                         autocomplete: "current-password",
                         required: true,
-                        class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                        class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                         value: "{current}",
                         oninput: move |event| current.set(event.value()),
                     }
@@ -61,7 +61,7 @@ pub fn ChangePassword() -> Element {
                         r#type: "password",
                         autocomplete: "new-password",
                         required: true,
-                        class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                        class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                         value: "{new}",
                         oninput: move |event| new.set(event.value()),
                     }
@@ -74,7 +74,7 @@ pub fn ChangePassword() -> Element {
                         r#type: "password",
                         autocomplete: "new-password",
                         required: true,
-                        class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                        class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                         value: "{confirm}",
                         oninput: move |event| confirm.set(event.value()),
                     }
@@ -86,7 +86,7 @@ pub fn ChangePassword() -> Element {
 
                 button {
                     r#type: "submit",
-                    class: "w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition hover:bg-indigo-700",
+                    class: "accent-button w-full rounded-md px-4 py-2 font-medium",
                     "Save password"
                 }
             }

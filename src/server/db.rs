@@ -39,6 +39,7 @@ pub async fn init() -> anyhow::Result<SqlitePool> {
             password_hash        TEXT    NOT NULL,
             is_admin             INTEGER NOT NULL DEFAULT 0,
             must_change_password INTEGER NOT NULL DEFAULT 1,
+            theme_color          TEXT,
             created_at           INTEGER NOT NULL
         );
         "#,
@@ -46,6 +47,11 @@ pub async fn init() -> anyhow::Result<SqlitePool> {
     .execute(&pool)
     .await
     .context("could not create the users table")?;
+
+    // Best-effort migration for databases created before themes existed.
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN theme_color TEXT")
+        .execute(&pool)
+        .await;
 
     Ok(pool)
 }
@@ -83,6 +89,7 @@ pub struct StoredUser {
     pub password_hash: String,
     pub is_admin: bool,
     pub must_change_password: bool,
+    pub theme_color: Option<String>,
 }
 
 impl StoredUser {
@@ -93,6 +100,7 @@ impl StoredUser {
             username: self.username,
             is_admin: self.is_admin,
             must_change_password: self.must_change_password,
+            theme_color: self.theme_color,
         }
     }
 
@@ -104,6 +112,7 @@ impl StoredUser {
             password_hash: row.try_get("password_hash")?,
             is_admin: row.try_get::<i64, _>("is_admin")? != 0,
             must_change_password: row.try_get::<i64, _>("must_change_password")? != 0,
+            theme_color: row.try_get("theme_color")?,
         })
     }
 }
@@ -115,12 +124,13 @@ fn user_from_row(row: &SqliteRow) -> Result<User, sqlx::Error> {
         username: row.try_get("username")?,
         is_admin: row.try_get::<i64, _>("is_admin")? != 0,
         must_change_password: row.try_get::<i64, _>("must_change_password")? != 0,
+        theme_color: row.try_get("theme_color")?,
     })
 }
 
 pub async fn find_by_username(username: &str) -> Result<Option<StoredUser>, sqlx::Error> {
     sqlx::query(
-        "SELECT id, name, username, password_hash, is_admin, must_change_password \
+        "SELECT id, name, username, password_hash, is_admin, must_change_password, theme_color \
          FROM users WHERE username = ?",
     )
     .bind(username)
@@ -133,7 +143,7 @@ pub async fn find_by_username(username: &str) -> Result<Option<StoredUser>, sqlx
 
 pub async fn find_by_id(id: UserId) -> Result<Option<StoredUser>, sqlx::Error> {
     sqlx::query(
-        "SELECT id, name, username, password_hash, is_admin, must_change_password \
+        "SELECT id, name, username, password_hash, is_admin, must_change_password, theme_color \
          FROM users WHERE id = ?",
     )
     .bind(id.0 as i64)
@@ -146,7 +156,7 @@ pub async fn find_by_id(id: UserId) -> Result<Option<StoredUser>, sqlx::Error> {
 
 pub async fn list_users() -> Result<Vec<User>, sqlx::Error> {
     let rows = sqlx::query(
-        "SELECT id, name, username, is_admin, must_change_password FROM users ORDER BY name",
+        "SELECT id, name, username, is_admin, must_change_password, theme_color FROM users ORDER BY name",
     )
     .fetch_all(pool())
     .await?;
@@ -188,6 +198,16 @@ pub async fn set_password(
     sqlx::query("UPDATE users SET password_hash = ?, must_change_password = ? WHERE id = ?")
         .bind(password_hash)
         .bind(must_change_password as i64)
+        .bind(id.0 as i64)
+        .execute(pool())
+        .await?;
+
+    Ok(())
+}
+
+pub async fn set_theme_color(id: UserId, theme_color: Option<&str>) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE users SET theme_color = ? WHERE id = ?")
+        .bind(theme_color)
         .bind(id.0 as i64)
         .execute(pool())
         .await?;

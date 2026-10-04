@@ -33,3 +33,9 @@ pub async fn logout() -> ServerFnResult<()> {
 pub async fn change_password(current: String, new: String) -> ServerFnResult<User> {
     Ok(server_auth::change_password(&session, &current, &new).await?)
 }
+
+/// Store the signed-in user's chosen theme color.
+#[post("/api/auth/theme", session: Session)]
+pub async fn set_theme_color(color: String) -> ServerFnResult<User> {
+    Ok(server_auth::set_theme_color(&session, &color).await?)
+}

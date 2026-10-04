@@ -13,7 +13,8 @@ use crate::api::auth::logout;
 use crate::api::chat::{ack_messages, contacts, events, send_message};
 use crate::models::{Message, User, UserId};
 use crate::routes::Route;
-use crate::views::RequireAuth;
+use crate::theme;
+use crate::views::{Brand, RequireAuth};
 
 const CHAT_ICON: Asset = asset!("/assets/chat.svg");
 
@@ -95,7 +96,9 @@ fn ChatScreen() -> Element {
         *generation.write() += 1;
     };
 
-    let selected_id = *selected.peek();
+    // Read reactively (not `.peek()`) so changing the selection re-renders — the
+    // back button and contact taps both rely on this.
+    let selected_id = selected();
     let thread_snapshot = thread();
     let query = search().trim().to_lowercase();
 
@@ -130,6 +133,12 @@ fn ChatScreen() -> Element {
     };
     let conversation_empty = conversation.is_empty();
 
+    let selected_avatar_style = selected_user
+        .as_ref()
+        .and_then(|user| user.theme_color.as_deref())
+        .map(theme::style_for)
+        .unwrap_or_default();
+
     // On small screens show either the list or the thread, never both.
     let list_class = if selected_id.is_some() {
         "hidden min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white md:flex md:w-80"
@@ -137,18 +146,18 @@ fn ChatScreen() -> Element {
         "flex min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white md:w-80"
     };
     let thread_class = if selected_id.is_some() {
-        "flex min-h-0 flex-1 flex-col bg-slate-50"
+        "flex min-h-0 flex-1 flex-col"
     } else {
-        "hidden min-h-0 flex-1 flex-col bg-slate-50 md:flex"
+        "hidden min-h-0 flex-1 flex-col md:flex"
     };
 
     rsx! {
-        div { class: "flex h-dvh flex-col bg-slate-100 text-slate-900",
+        div { class: "accent-softer flex h-dvh flex-col text-slate-900",
             if !connected() {
                 div { class: "flex items-center justify-between gap-3 bg-amber-50 px-6 py-2 text-sm text-amber-800",
                     span { "Disconnected — this account may be open in another tab." }
                     button {
-                        class: "rounded border border-amber-300 px-2 py-0.5 font-medium hover:bg-amber-100",
+                        class: "accent-outline rounded-md px-2 py-0.5 font-medium",
                         onclick: on_reconnect,
                         "Reconnect"
                     }
@@ -162,13 +171,20 @@ fn ChatScreen() -> Element {
             div { class: "flex min-h-0 flex-1",
                 aside { class: "{list_class}",
                     header { class: "flex items-center justify-between px-5 py-4",
-                        span { class: "text-xl font-semibold", "mutter" }
-                        SignOutButton {}
+                        Brand { size_class: "text-xl" }
+                        div { class: "flex items-center gap-2",
+                            Link {
+                                to: Route::ThemePicker {},
+                                class: "accent-outline rounded-md px-2.5 py-1 text-xs font-medium",
+                                "Theme"
+                            }
+                            SignOutButton {}
+                        }
                     }
 
                     div { class: "px-4 pb-3",
                         input {
-                            class: "w-full rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400",
+                            class: "accent-field w-full rounded-md px-4 py-2 text-sm placeholder:text-slate-400",
                             placeholder: "Search here...",
                             value: "{search}",
                             oninput: move |event| search.set(event.value()),
@@ -205,7 +221,7 @@ fn ChatScreen() -> Element {
                         Some(user) => rsx! {
                             header { class: "flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-4 md:px-6",
                                 button {
-                                    class: "rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden",
+                                    class: "accent-outline rounded-md p-1.5 md:hidden",
                                     aria_label: "Back to conversations",
                                     onclick: move |_| selected.set(None),
                                     svg {
@@ -219,7 +235,8 @@ fn ChatScreen() -> Element {
                                         path { d: "M15 18l-6-6 6-6" }
                                     }
                                 }
-                                div { class: "flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold text-white",
+                                div { class: "accent-fill flex h-10 w-10 items-center justify-center rounded text-sm font-semibold",
+                                    style: "{selected_avatar_style}",
                                     "{initials(&user.name)}"
                                 }
                                 div {
@@ -246,14 +263,14 @@ fn ChatScreen() -> Element {
                                 class: "flex items-center gap-3 border-t border-slate-200 bg-white px-4 py-4 md:px-6",
                                 onsubmit: on_send,
                                 input {
-                                    class: "flex-1 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400",
+                                    class: "accent-field flex-1 rounded-md px-4 py-2 placeholder:text-slate-400",
                                     placeholder: "Type your message",
                                     value: "{draft}",
                                     oninput: move |event| draft.set(event.value()),
                                 }
                                 button {
                                     r#type: "submit",
-                                    class: "rounded-full bg-indigo-600 px-5 py-2 font-medium text-white hover:bg-indigo-700",
+                                    class: "accent-button rounded-md px-5 py-2 font-medium",
                                     "Send"
                                 }
                             }
@@ -276,16 +293,22 @@ fn ContactRow(
 ) -> Element {
     let id = user.id;
     let preview = last.unwrap_or_else(|| format!("@{}", user.username));
+    let avatar_style = user
+        .theme_color
+        .as_deref()
+        .map(theme::style_for)
+        .unwrap_or_default();
 
     rsx! {
         button {
             class: if selected {
-                "flex w-full items-center gap-3 rounded-xl bg-indigo-50 px-3 py-2 text-left"
+                "accent-soft flex w-full items-center gap-3 rounded-md px-3 py-2 text-left"
             } else {
-                "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-slate-50"
+                "accent-row flex w-full items-center gap-3 rounded-md px-3 py-2 text-left"
             },
             onclick: move |_| on_select.call(id),
-            div { class: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold text-white",
+            div { class: "accent-fill flex h-10 w-10 shrink-0 items-center justify-center rounded text-sm font-semibold",
+                style: "{avatar_style}",
                 "{initials(&user.name)}"
             }
             div { class: "min-w-0 flex-1",
@@ -293,7 +316,7 @@ fn ContactRow(
                 div { class: "truncate text-sm text-slate-500", "{preview}" }
             }
             if unread > 0 {
-                span { class: "ml-2 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white",
+                span { class: "accent-fill ml-2 rounded px-2 py-0.5 text-xs font-semibold",
                     "{unread}"
                 }
             }
@@ -307,14 +330,14 @@ fn Bubble(mine: bool, contents: String, sent: u64) -> Element {
         div { class: if mine { "flex justify-end" } else { "flex justify-start" },
             div {
                 class: if mine {
-                    "max-w-md rounded-2xl rounded-br-sm bg-indigo-600 px-4 py-2 text-white"
+                    "accent-fill max-w-md rounded-md px-4 py-2"
                 } else {
-                    "max-w-md rounded-2xl rounded-bl-sm bg-white px-4 py-2 text-slate-800 shadow-sm"
+                    "max-w-md rounded-md border border-slate-200 bg-white px-4 py-2 text-slate-800"
                 },
                 p { class: "whitespace-pre-wrap break-words", "{contents}" }
                 div {
                     class: if mine {
-                        "mt-1 text-right text-[11px] text-indigo-200"
+                        "mt-1 text-right text-[11px] opacity-70"
                     } else {
                         "mt-1 text-right text-[11px] text-slate-400"
                     },
@@ -330,7 +353,7 @@ fn EmptyState() -> Element {
     rsx! {
         div { class: "flex flex-1 items-center justify-center",
             div { class: "text-center",
-                div { class: "mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-100",
+                div { class: "accent-soft mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-md",
                     img { src: CHAT_ICON, class: "h-7 w-7", alt: "" }
                 }
                 h2 { class: "text-lg font-semibold text-slate-700", "Select a conversation" }
@@ -346,7 +369,7 @@ fn SignOutButton() -> Element {
 
     rsx! {
         button {
-            class: "rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100",
+            class: "accent-outline rounded-md px-2.5 py-1 text-xs font-medium",
             onclick: move |_| async move {
                 let _ = logout().await;
                 let _ = navigator.replace(Route::Login {});

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="101.66499mm"
+   height="101.66501mm"
+   viewBox="0 0 101.66499 101.66501"
+   version="1.1"
+   id="svg2"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2">
+    <linearGradient
+       id="tileFill">
+      <stop
+         style="stop-color:#ddf5f6;stop-opacity:1"
+         offset="0"
+         id="stop1" />
+      <stop
+         style="stop-color:#d6f3f3;stop-opacity:1"
+         offset="1"
+         id="stop2" />
+    </linearGradient>
+    <radialGradient
+       xlink:href="#tileFill"
+       id="tile"
+       cx="102.5106"
+       cy="154.18105"
+       fx="102.5106"
+       fy="154.18105"
+       r="50"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(2.4893941,-5.681058)" />
+  </defs>
+  <g
+     transform="translate(-54.1675,-97.667493)"
+     id="g2">
+    <rect
+       style="fill:url(#tile);stroke:#80b6ba;stroke-width:1.665;stroke-opacity:1"
+       width="100"
+       height="100"
+       x="55"
+       y="98.5"
+       ry="8.8217821"
+       id="rect2" />
+    <path
+       d="m 70.230957,170.5 v -45.10742 h 31.333003 v 6.93262 H 78.223145 v 11.86718 h 21.58496 v 6.81153 h -21.58496 v 12.56347 H 101.56396 V 170.5 Z m 37.115233,0 v -45.10742 h 17.58887 q 4.96484,0 8.56738,1.75586 3.63281,1.75586 5.60059,4.99511 1.96777,3.23926 1.96777,7.65918 0,4.38965 -2.08887,7.59864 -2.05859,3.20898 -5.8125,4.96484 -3.72363,1.72559 -8.74902,1.72559 h -12.35156 v -6.59961 h 12.47265 q 2.66407,0 4.60157,-0.93848 1.9375,-0.93848 2.99707,-2.66406 1.05957,-1.72559 1.05957,-4.08692 0,-2.36132 -1.05957,-4.05664 -1.05957,-1.69531 -2.99707,-2.63379 -1.9375,-0.93847 -4.66211,-0.93847 h -9.14258 V 170.5 Z m 25.7627,0 -10.50489,-20.34375 h 8.59766 L 141.91846,170.5 Z"
+       id="text2"
+       style="font-weight:600;font-size:62px;font-family:'DejaVu Sans', 'Segoe UI', system-ui, '-apple-system', sans-serif;text-anchor:middle;fill:#2e4040"
+       aria-label="ER" />
+  </g>
+</svg>

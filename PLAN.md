@@ -34,6 +34,7 @@ deliberately deferred.
 | Identity | **Username + password.** Invite-only: an admin is the only one who can create accounts. |
 | Activation flow | Admin creates an account and gets a **one-time temporary password**. The user logs in with it and is **forced to change it** before doing anything else. |
 | Account storage | **SQLite via `sqlx`.** Single file. Only the `users` table persists. |
+| Theme | **Per-user accent stored on the account.** Chosen on first login from pastel presets or an advanced color picker, and applied through CSS custom properties with derived foreground, border, and soft shades. |
 | Sessions | **`tower-sessions` with its in-memory store.** HttpOnly, `SameSite=Strict` cookie (name `id`); a server restart logs everyone out. |
 | Server state | **`Lazy` / `LazyLock` globals** (Dioxus fullstack's recommended global state), rather than an axum `Extension` + `ServerState`. |
 | Message privacy | **Plaintext in memory, never persisted.** Server can read contents while queued; nothing touches disk. |
@@ -180,15 +181,24 @@ Routes (Dioxus router):
 
 - `/login` — username + password
 - `/change-password` — forced when `must_change_password`
+- `/theme` — accent picker (on first login, or from the sidebar/admin header)
 - `/` — chat (auth required)
 - `/admin` — user management (admin only)
 
-Chat screen follows the minimal `inso/chat-ui-3.webp` layout:
+Chat screen follows the minimal `inso/chat-ui-3.webp` layout, but with slightly
+rounded rectangles rather than pills/circles:
 
-- **Left pane:** conversation list (avatar, name, last-activity, unread dot).
-- **Right pane:** message thread (sender bubbles right/colored, recipient left/neutral,
-  timestamps) and a bottom composer.
+- **Left pane:** conversation list (rounded-square avatar in the contact's chosen
+  color, name, last-message preview, unread badge).
+- **Right pane:** message thread (sent bubbles in the viewer's accent, received
+  bubbles neutral, local `HH:MM` times) and a bottom composer.
 - In-memory thread state lives in a `Signal<Vec<Message>>`; cleared on reload.
+
+The accent is the account's theme color. `RequireAuth` publishes it as CSS custom
+properties (`--accent`, `--accent-fg`, `--accent-border`, `--accent-soft`,
+`--accent-softer`), and the `.accent-*` helpers in `assets/main.css` consume them, so
+the palette changes at runtime without rebuilding Tailwind. Each contact's avatar
+uses their own stored color; the signed-out screens use the `:root` default.
 
 ## 8. Deferred / out of scope for v1
 

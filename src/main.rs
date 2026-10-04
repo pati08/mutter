@@ -7,6 +7,7 @@ mod api;
 mod app;
 mod models;
 mod routes;
+mod theme;
 mod views;
 
 #[cfg(feature = "server")]

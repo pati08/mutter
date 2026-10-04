@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 
 use crate::api::auth::login;
 use crate::routes::Route;
+use crate::views::Brand;
 
 #[component]
 pub fn Login() -> Element {
@@ -20,6 +21,8 @@ pub fn Login() -> Element {
             Ok(Some(user)) => {
                 let target = if user.must_change_password {
                     Route::ChangePassword {}
+                } else if user.theme_color.is_none() {
+                    Route::ThemePicker {}
                 } else {
                     Route::Home {}
                 };
@@ -31,12 +34,14 @@ pub fn Login() -> Element {
     };
 
     rsx! {
-        div { class: "flex min-h-dvh items-center justify-center bg-slate-100 p-4",
+        div { class: "flex min-h-dvh items-center justify-center accent-softer p-4",
             form {
-                class: "w-full max-w-sm space-y-4 rounded-2xl bg-white p-8 shadow-lg",
+                class: "accent-card w-full max-w-sm space-y-4 rounded-md p-8",
                 onsubmit: on_submit,
 
-                h1 { class: "text-2xl font-semibold text-slate-900", "mutter" }
+                h1 { class: "text-slate-900",
+                    Brand { size_class: "text-2xl" }
+                }
                 p { class: "text-sm text-slate-500", "Sign in to continue." }
 
                 div { class: "space-y-1",
@@ -46,7 +51,7 @@ pub fn Login() -> Element {
                         r#type: "text",
                         autocomplete: "username",
                         required: true,
-                        class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                        class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                         value: "{username}",
                         oninput: move |event| username.set(event.value()),
                     }
@@ -59,7 +64,7 @@ pub fn Login() -> Element {
                         r#type: "password",
                         autocomplete: "current-password",
                         required: true,
-                        class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                        class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                         value: "{password}",
                         oninput: move |event| password.set(event.value()),
                     }
@@ -71,7 +76,7 @@ pub fn Login() -> Element {
 
                 button {
                     r#type: "submit",
-                    class: "w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition hover:bg-indigo-700",
+                    class: "accent-button w-full rounded-md px-4 py-2 font-medium",
                     "Sign in"
                 }
             }

@@ -137,6 +137,22 @@ pub async fn list_users(session: &Session) -> anyhow::Result<Vec<User>> {
     Ok(db::list_users().await?)
 }
 
+/// Stores the signed-in user's chosen accent color.
+pub async fn set_theme_color(session: &Session, color: &str) -> anyhow::Result<User> {
+    let user = require_user(session).await?;
+
+    if !crate::theme::is_valid_hex(color) {
+        return Err(anyhow!("that is not a valid color"));
+    }
+
+    db::set_theme_color(user.id, Some(color)).await?;
+
+    let updated = db::find_by_id(user.id)
+        .await?
+        .ok_or_else(|| anyhow!("account no longer exists"))?;
+    Ok(updated.into_user())
+}
+
 /// Creates an account and returns its one-time temporary password.
 pub async fn create_user(session: &Session, name: &str, username: &str) -> anyhow::Result<String> {
     require_admin(session).await?;

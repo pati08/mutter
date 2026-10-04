@@ -7,7 +7,7 @@ use crate::api::admin::{
 };
 use crate::api::auth::logout;
 use crate::routes::Route;
-use crate::views::RequireAuth;
+use crate::views::{Brand, RequireAuth};
 
 #[component]
 pub fn Admin() -> Element {
@@ -47,22 +47,32 @@ fn AdminPanel() -> Element {
     };
 
     rsx! {
-        div { class: "min-h-dvh bg-slate-50",
+        div { class: "min-h-dvh accent-softer",
             header { class: "flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3",
-                span { class: "text-lg font-semibold text-slate-900", "mutter · accounts" }
-                button {
-                    class: "rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100",
-                    onclick: move |_| async move {
-                        let _ = logout().await;
-                        let _ = navigator.replace(Route::Login {});
-                    },
-                    "Sign out"
+                div { class: "flex items-center gap-2",
+                    Brand { size_class: "text-lg" }
+                    span { class: "text-lg font-semibold", "· accounts" }
+                }
+                div { class: "flex items-center gap-2",
+                    Link {
+                        to: Route::ThemePicker {},
+                        class: "accent-outline rounded-md px-3 py-1.5 text-sm font-medium",
+                        "Theme"
+                    }
+                    button {
+                        class: "accent-outline rounded-md px-3 py-1.5 text-sm font-medium",
+                        onclick: move |_| async move {
+                            let _ = logout().await;
+                            let _ = navigator.replace(Route::Login {});
+                        },
+                        "Sign out"
+                    }
                 }
             }
 
             main { class: "mx-auto max-w-3xl space-y-6 p-6",
                 form {
-                    class: "flex flex-wrap items-end gap-3 rounded-2xl bg-white p-5 shadow",
+                    class: "accent-card flex flex-wrap items-end gap-3 rounded-md p-5",
                     onsubmit: on_create,
 
                     div { class: "flex-1 space-y-1",
@@ -71,7 +81,7 @@ fn AdminPanel() -> Element {
                             id: "name",
                             r#type: "text",
                             required: true,
-                            class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                            class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                             value: "{name}",
                             oninput: move |event| name.set(event.value()),
                         }
@@ -83,7 +93,7 @@ fn AdminPanel() -> Element {
                             id: "new-username",
                             r#type: "text",
                             required: true,
-                            class: "w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-500",
+                            class: "accent-field w-full rounded-md px-3 py-2 placeholder:text-slate-400",
                             value: "{username}",
                             oninput: move |event| username.set(event.value()),
                         }
@@ -91,27 +101,27 @@ fn AdminPanel() -> Element {
 
                     button {
                         r#type: "submit",
-                        class: "rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700",
+                        class: "accent-button rounded-md px-4 py-2 font-medium",
                         "Create account"
                     }
                 }
 
                 if let Some(message) = status() {
-                    div { class: "rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800",
+                    div { class: "rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800",
                         "{message}"
                     }
                 }
                 if let Some(message) = error() {
-                    div { class: "rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800",
+                    div { class: "rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800",
                         "{message}"
                     }
                 }
 
                 match users() {
                     Some(Ok(list)) => rsx! {
-                        div { class: "overflow-hidden rounded-2xl bg-white shadow",
+                        div { class: "accent-card overflow-hidden rounded-md",
                             table { class: "w-full text-left",
-                                thead { class: "bg-slate-100 text-xs uppercase text-slate-500",
+                                thead { class: "accent-soft text-xs uppercase text-slate-500",
                                     tr {
                                         th { class: "px-4 py-2", "User" }
                                         th { class: "px-4 py-2", "Role" }
@@ -128,7 +138,7 @@ fn AdminPanel() -> Element {
                                             }
                                             td { class: "px-4 py-3 text-sm",
                                                 if user.is_admin {
-                                                    span { class: "rounded bg-indigo-100 px-2 py-0.5 text-indigo-700", "admin" }
+                                                    span { class: "accent-fill rounded px-2 py-0.5 text-xs font-medium", "admin" }
                                                 } else {
                                                     span { class: "text-slate-600", "user" }
                                                 }
@@ -142,7 +152,7 @@ fn AdminPanel() -> Element {
                                             }
                                             td { class: "px-4 py-3 text-right text-sm",
                                                 button {
-                                                    class: "mr-2 rounded border border-slate-300 px-2 py-1 text-slate-700 hover:bg-slate-100",
+                                                    class: "accent-outline mr-2 rounded-md px-2 py-1",
                                                     onclick: move |_| async move {
                                                         error.set(None);
                                                         match admin_reset_password(user.id.0).await {
@@ -153,7 +163,7 @@ fn AdminPanel() -> Element {
                                                     "Reset"
                                                 }
                                                 button {
-                                                    class: "rounded border border-red-200 px-2 py-1 text-red-600 hover:bg-red-50",
+                                                    class: "rounded-md border border-red-200 px-2 py-1 text-red-600 hover:bg-red-50",
                                                     onclick: move |_| async move {
                                                         error.set(None);
                                                         match admin_delete_user(user.id.0).await {

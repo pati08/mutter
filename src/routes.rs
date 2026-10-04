@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 
-use crate::views::{Admin, ChangePassword, Home, Login};
+use crate::views::{Admin, ChangePassword, Home, Login, ThemePicker};
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -11,6 +11,8 @@ pub enum Route {
     Login {},
     #[route("/change-password")]
     ChangePassword {},
+    #[route("/theme")]
+    ThemePicker {},
     #[route("/admin")]
     Admin {},
     #[route("/")]

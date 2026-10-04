@@ -14,6 +14,8 @@ pub struct User {
     pub username: String,
     pub is_admin: bool,
     pub must_change_password: bool,
+    /// The user's chosen accent color, if they have picked one yet.
+    pub theme_color: Option<String>,
 }
 
 /// Identifier for a single message, used for acknowledging delivery.
