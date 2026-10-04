@@ -117,3 +117,9 @@ input::placeholder {
 .accent-softer {
     background-color: var(--accent-softer);
 }
+
+/* The Google font used for avatar initials. */
+.font-cookie {
+    font-family: "Cookie", cursive;
+    font-weight: 400;
+}

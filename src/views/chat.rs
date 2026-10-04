@@ -235,7 +235,7 @@ fn ChatScreen() -> Element {
                                         path { d: "M15 18l-6-6 6-6" }
                                     }
                                 }
-                                div { class: "accent-fill flex h-10 w-10 items-center justify-center rounded text-sm font-semibold",
+                                div { class: "accent-fill font-cookie flex h-10 w-10 items-center justify-center rounded text-2xl leading-none",
                                     style: "{selected_avatar_style}",
                                     "{initials(&user.name)}"
                                 }
@@ -307,7 +307,7 @@ fn ContactRow(
                 "accent-row flex w-full items-center gap-3 rounded-md px-3 py-2 text-left"
             },
             onclick: move |_| on_select.call(id),
-            div { class: "accent-fill flex h-10 w-10 shrink-0 items-center justify-center rounded text-sm font-semibold",
+            div { class: "accent-fill font-cookie flex h-10 w-10 shrink-0 items-center justify-center rounded text-2xl leading-none",
                 style: "{avatar_style}",
                 "{initials(&user.name)}"
             }

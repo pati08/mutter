@@ -99,7 +99,7 @@ fn ThemePickerInner() -> Element {
 
                 div { class: "rounded-md border border-slate-200 p-4",
                     div { class: "flex items-center gap-3",
-                        div { class: "accent-fill flex h-10 w-10 items-center justify-center rounded text-sm font-semibold",
+                        div { class: "accent-fill font-cookie flex h-10 w-10 items-center justify-center rounded text-2xl leading-none",
                             "AB"
                         }
                         div { class: "accent-soft flex-1 rounded-md px-3 py-2 text-sm text-slate-700",
